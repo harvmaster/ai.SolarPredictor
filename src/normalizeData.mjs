@@ -1,5 +1,9 @@
+import { data as d } from '../data.mjs';
+
+const cleanedData = d.filter(row => row.SOC != null && row.SOC < 95)
+
 export const normalizeData = (data, target) => {
-  let featuresSum = data.reduce((acc, row) => {
+  let featuresSum = cleanedData.reduce((acc, row) => {
     Object.keys(row).forEach(key => {
         if (key !== 'time' && key !== target) { // Assuming 'time' is not to be normalized
             acc[key] = (acc[key] || 0) + row[key];
@@ -11,10 +15,10 @@ export const normalizeData = (data, target) => {
   let featuresMean = {};
   let featuresStd = {};
   Object.keys(featuresSum).forEach(key => {
-      featuresMean[key] = featuresSum[key] / data.length;
+      featuresMean[key] = featuresSum[key] / cleanedData.length;
   });
 
-  data.forEach(row => {
+  cleanedData.forEach(row => {
       Object.keys(row).forEach(key => {
           if (key !== 'time') {
               featuresStd[key] = (featuresStd[key] || 0) + Math.pow(row[key] - featuresMean[key], 2);
@@ -23,7 +27,7 @@ export const normalizeData = (data, target) => {
   });
 
   Object.keys(featuresStd).forEach(key => {
-      featuresStd[key] = Math.sqrt(featuresStd[key] / data.length);
+      featuresStd[key] = Math.sqrt(featuresStd[key] / cleanedData.length);
   });
 
   const normalizedData = data.map(row => {

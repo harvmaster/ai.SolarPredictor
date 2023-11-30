@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/index.js",
+    "dense": "node src/backup.js",
+    "load": "node src/loadModel.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

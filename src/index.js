@@ -9,7 +9,14 @@ const fileName = new Date().toLocaleString().replace(/\//g, '-').replace(/,/g, '
 if (fs.existsSync('./history.json')) fs.rmSync(`./history.json`)
 
 // Data Preparation
-const cleanedData = normalizeData(data.filter(row => row.SOC != null && row.SOC < 99), 'solarInput')
+const normalizedData = normalizeData(data.filter(row => row.SOC != null && row.SOC < 95), 'solarInput')
+const cleanedData = data.filter(row => row.SOC != null && row.SOC < 95)
+// const cleanedData = normalised.map(({time, ...d}) => {
+//     return {
+//         time: new Date(time).getTime(),
+//         ...d
+//     }
+// })
 
 console.log(cleanedData)
 
@@ -18,9 +25,9 @@ const slicedDataTraining = cleanedData.slice(0, trainSize);
 const slicedDataTesting = cleanedData.slice(trainSize);
 
 const trainingLabel = slicedDataTraining.map(({ solarInput }) => Math.floor(solarInput));
-const trainingData = slicedDataTraining.map(({ solarInput, SOC, visibility, time, ...d }) => Object.values(d));
+const trainingData = slicedDataTraining.map(({ solarInput, SOC, time, visibility, ...d }) => Object.values(d));
 const testingLabel = slicedDataTesting.map(({ solarInput }) => Math.floor(solarInput));
-const testingData = slicedDataTesting.map(({ solarInput, SOC, visibility, time, ...d }) => Object.values(d));
+const testingData = slicedDataTesting.map(({ solarInput, SOC, time, visibility, ...d }) => Object.values(d));
 
 // Reshape Data for LSTM
 const numTimesteps = 24;
@@ -31,6 +38,7 @@ const reshapeData = (data, numTimesteps, features) => {
     for (let i = 0; i <= data.length - numTimesteps; i++) {
         reshaped.push(data.slice(i, i + numTimesteps));
     }
+    console.log(reshaped)
     return tf.tensor3d(reshaped, [reshaped.length, numTimesteps, features]);
 };
 
@@ -43,13 +51,13 @@ const testingLabelTensor = tf.tensor2d(adjustLabels(testingLabel, numTimesteps),
 
 // Model Creation
 const model = tf.sequential();
-model.add(tf.layers.lstm({ units: 8, inputShape: [numTimesteps, features], returnSequences: true }));
-model.add(tf.layers.lstm({ units: 4, returnSequences: false }));
+model.add(tf.layers.lstm({ units: 16, inputShape: [numTimesteps, features], returnSequences: true }));
+model.add(tf.layers.lstm({ units: 16, returnSequences: false }));
 // model.add(tf.layers.lstm({ units: 16, returnSequences: false }));
 model.add(tf.layers.dense({ units: 1, activation: 'linear' }));
 
 const learningRate = 0.5;
-const optimizer = tf.train.adamax(learningRate);
+const optimizer = tf.train.adamax(learningRate, 0.9, 0.999, 1e-8);
 
 model.compile({
     optimizer: optimizer,
@@ -59,9 +67,9 @@ model.compile({
 // Training the Model
 const trainModel = async () => {
     const response = await model.fit(trainingDataTensor, trainingLabelTensor, {
-        epochs: 150,
+        epochs: 2000,
         validationSplit: 0.3,
-        callbacks: tf.node.tensorBoard('../tmp/fit_logs_1')
+        callbacks: tf.node.tensorBoard(`../tmp/${fileName}`)
     });
     console.log(response.history);
 
